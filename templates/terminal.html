@@ -1,32 +1,33 @@
 <!DOCTYPE html>
 <html>
-<body>
-<pre id="term" style="background:black;color:lime;height:90vh;overflow:auto"></pre>
-<input id="cmd" autofocus style="width:100%">
+<head>
+  <meta charset="utf-8">
+  <title>Web SSH</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css">
+  <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body style="margin:0;background:black">
+
+<div id="terminal" style="height:100vh;width:100vw"></div>
 
 <script>
-const term = document.getElementById("term")
-const input = document.getElementById("cmd")
+const term = new Terminal({ cursorBlink: true })
+term.open(document.getElementById("terminal"))
 
-input.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    fetch("/cmd", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({cmd: input.value})
-    })
-    input.value = ""
-  }
+const socket = io()
+
+let fd = null
+
+socket.emit("start")
+
+socket.on("output", data => {
+  term.write(data)
 })
 
-setInterval(async () => {
-  const r = await fetch("/read")
-  const j = await r.json()
-  if (j.out) {
-    term.textContent += j.out
-    term.scrollTop = term.scrollHeight
-  }
-}, 300)
+term.onData(data => {
+  socket.emit("input", { data })
+})
 </script>
 </body>
 </html>
