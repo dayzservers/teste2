@@ -1,0 +1,39 @@
+name: Web SSH Ubuntu
+
+on:
+  workflow_dispatch:
+
+jobs:
+  webssh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install deps
+      run: |
+        pip install -r requirements.txt
+
+    - name: Install ngrok
+      run: |
+        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+        sudo apt update
+        sudo apt install ngrok
+
+    - name: Start Flask + ngrok
+      env:
+        WEB_USER: ${{ secrets.WEB_USER }}
+        WEB_PASS: ${{ secrets.WEB_PASS }}
+        FLASK_SECRET: ${{ secrets.FLASK_SECRET }}
+        NGROK_AUTHTOKEN: ${{ secrets.NGROK_TOKEN }}
+      run: |
+        ngrok config add-authtoken $NGROK_AUTHTOKEN
+        python app.py &
+        ngrok http 5000 --log=stdout
