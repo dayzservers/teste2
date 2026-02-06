@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body>
+<pre id="term" style="background:black;color:lime;height:90vh;overflow:auto"></pre>
+<input id="cmd" autofocus style="width:100%">
+
+<script>
+const term = document.getElementById("term")
+const input = document.getElementById("cmd")
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    fetch("/cmd", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({cmd: input.value})
+    })
+    input.value = ""
+  }
+})
+
+setInterval(async () => {
+  const r = await fetch("/read")
+  const j = await r.json()
+  if (j.out) {
+    term.textContent += j.out
+    term.scrollTop = term.scrollHeight
+  }
+}, 300)
+</script>
+</body>
+</html>
