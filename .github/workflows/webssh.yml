@@ -1,4 +1,4 @@
-name: Web SSH Ubuntu (ShellInABox Style)
+name: Web SSH ttyd (Stable)
 
 on:
   workflow_dispatch:
@@ -11,14 +11,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install system dependencies
+    - name: Install deps
       run: |
         sudo apt update
-        sudo apt install -y ttyd python3-pip curl
-
-    - name: Install Python dependencies
-      run: |
-        pip install -r requirements.txt
+        sudo apt install -y ttyd curl
 
     - name: Install ngrok
       run: |
@@ -27,11 +23,10 @@ jobs:
         sudo apt update
         sudo apt install -y ngrok
 
-    - name: Run Web SSH
+    - name: Run ttyd
       env:
         WEB_USER: ${{ secrets.WEB_USER }}
         WEB_PASS: ${{ secrets.WEB_PASS }}
-        FLASK_SECRET: ${{ secrets.FLASK_SECRET }}
         NGROK_AUTHTOKEN: ${{ secrets.NGROK_TOKEN }}
       run: |
         ngrok config add-authtoken $NGROK_AUTHTOKEN
