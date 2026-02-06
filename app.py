@@ -4,11 +4,12 @@ from flask import Flask, request, redirect, session, render_template, Response
 
 WEB_USER = os.getenv("WEB_USER")
 WEB_PASS = os.getenv("WEB_PASS")
+TTYD_PORT = os.getenv("TTYD_PORT")  # porta dinâmica
+
+TTYD_INTERNAL = f"http://127.0.0.1:{TTYD_PORT}"
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET")
-
-TTYD_INTERNAL = "http://127.0.0.1:7681"
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -42,7 +43,6 @@ def proxy_ttyd(path):
         url=url,
         headers={k: v for k, v in request.headers if k.lower() != "host"},
         data=request.get_data(),
-        cookies=request.cookies,
         stream=True,
         allow_redirects=False,
     )
@@ -50,9 +50,12 @@ def proxy_ttyd(path):
     excluded = ["content-encoding", "content-length", "transfer-encoding", "connection"]
     headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in excluded]
 
-    return Response(resp.iter_content(chunk_size=1024),
-                    status=resp.status_code,
-                    headers=headers)
+    return Response(
+        resp.iter_content(chunk_size=1024),
+        status=resp.status_code,
+        headers=headers,
+    )
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, threaded=True)
