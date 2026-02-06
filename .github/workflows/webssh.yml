@@ -1,30 +1,33 @@
-name: Web SSH Shell
+name: Web SSH Ubuntu (ShellInABox Style)
 
 on:
   workflow_dispatch:
 
 jobs:
-  shell:
+  webssh:
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install deps
+    - name: Install system deps
       run: |
         sudo apt update
-        sudo apt install -y ttyd python3-pip
-        pip install flask requests
+        sudo apt install -y ttyd python3-pip curl
+
+    - name: Install Python deps
+      run: |
+        pip install -r requirements.txt
 
     - name: Install ngrok
       run: |
         curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
         echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
         sudo apt update
-        sudo apt install ngrok
+        sudo apt install -y ngrok
 
-    - name: Run Web Shell
+    - name: Run Web SSH
       env:
         WEB_USER: ${{ secrets.WEB_USER }}
         WEB_PASS: ${{ secrets.WEB_PASS }}
