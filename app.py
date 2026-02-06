@@ -1,50 +1,47 @@
 import os
-import pty
-import subprocess
-from flask import Flask, render_template, request, redirect, session
-from flask_socketio import SocketIO, emit
-import select
+from flask import Flask, request, redirect, session, render_template, Response
+import requests
 
-APP_USER = os.getenv("WEB_USER")
-APP_PASS = os.getenv("WEB_PASS")
+USER = os.getenv("WEB_USER")
+PASS = os.getenv("WEB_PASS")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET")
-socketio = SocketIO(app, cors_allowed_origins="*")
+
+TTYD_URL = "http://127.0.0.1:7681"
 
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        if request.form["username"] == APP_USER and request.form["password"] == APP_PASS:
+        if request.form["username"] == USER and request.form["password"] == PASS:
             session["auth"] = True
-            return redirect("/terminal")
+            return redirect("/terminal/")
         return render_template("login.html", error="Login inválido")
     return render_template("login.html")
 
-@app.route("/terminal")
+@app.route("/terminal/")
 def terminal():
     if not session.get("auth"):
         return redirect("/")
-    return render_template("terminal.html")
+    return proxy("")
 
-@socketio.on("start")
-def start_terminal():
+@app.route("/terminal/<path:path>")
+def terminal_proxy(path):
     if not session.get("auth"):
-        return
+        return redirect("/")
+    return proxy(path)
 
-    pid, fd = pty.fork()
-    if pid == 0:
-        os.execvp("/bin/bash", ["/bin/bash"])
-    else:
-        while True:
-            r, _, _ = select.select([fd], [], [], 0.1)
-            if fd in r:
-                data = os.read(fd, 1024).decode(errors="ignore")
-                emit("output", data)
+def proxy(path):
+    url = f"{TTYD_URL}/{path}"
+    resp = requests.request(
+        method=request.method,
+        url=url,
+        headers={k: v for k, v in request.headers if k != "Host"},
+        data=request.get_data(),
+        stream=True
+    )
 
-@socketio.on("input")
-def terminal_input(data):
-    os.write(data["fd"], data["data"].encode())
+    return Response(resp.iter_content(1024), status=resp.status_code, headers=dict(resp.headers))
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000)
